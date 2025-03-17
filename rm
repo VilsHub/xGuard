@@ -165,7 +165,7 @@ function deleteFile(){
             parsedOptions="-"$options
         fi
 
-        # $mainRM $parsedOptions $file
+        $mainRM $parsedOptions $file
 
         if [ $? -eq 0 ]; then
             echo -e "'$file' deleted successfully!\n"
