@@ -75,10 +75,10 @@ function promptForDeletion(){
     objectType=$(objectExist $directory)
 
     echo -e "\nThe $objectType '$directory' to be detected exist within $level levels deep from the Protected directory '"$protectedDirectory"'"
-    echo "You would need to supply your password or cancel ( Ctrl + C ) to use the inbuilt rm '$mainRM' utility"
+    echo "You would need to supply your password to proceed or cancel ( Ctrl + C ) to use the inbuilt rm '$mainRM' utility for deletion"
     read -p "Password: " password
     while [ $password != $delPassword ]; do
-        echo "Incorrect password, try again or cancel ( Ctrl + C ) to use the inbuilt rm '$mainRM' utility"
+        echo "Incorrect password, try again or cancel ( Ctrl + C ) to use the inbuilt rm '$mainRM' utility for deletion"
         read -sp "Password: " password
     done
     return 22
@@ -116,10 +116,12 @@ function newObject(){
         read -a parsedPathsSegment <<< "$pathsSegment"
 
         totalPathSegments=${#parsedPathsSegment[@]}
+        
+        echo "totalSegmen = "$totalPathSegments
         cd $(printf '../%.0s' $(seq 1 $totalPathSegments))
         path="${path//..\//}"
         path="/"$path
-
+        echo "C path = "$path
     else
         path="/"$path
     fi
@@ -165,7 +167,7 @@ function deleteFile(){
             parsedOptions="-"$options
         fi
 
-        $mainRM $parsedOptions $file
+        #$mainRM $parsedOptions $file
 
         if [ $? -eq 0 ]; then
             echo -e "'$file' deleted successfully!\n"
@@ -277,58 +279,74 @@ if [ $totalFilesOrDirs -gt 1 ]; then
     done
 else
     # Single directories deletion detected 
+    # #objects holds a single directory
+    targetObject=$objects
     eShow=0
     delFile=0
-    if [ $object == "/" ]; then
-        echo -e "Trying to delete '/' exiting....\n"
-        exit 0
-    else
+    canDelete=0
 
-        for protectedDirectory in ${protectedDirectories[@]}; do
-            isPathRelative=$(isRelative $params)
-            object=$params
+    if [ ${#targetObject} -gt 0 ]; then
+        if [ $targetObject == "/" ]; then
+            echo -e "Trying to delete '/' exiting....\n"
+            exit 0
+        else
 
-            if [ $isPathRelative -eq 1 ];then
-                object=$(newObject $params)
-            fi
+            for protectedDirectory in ${protectedDirectories[@]}; do
 
-            objectType=$(objectExist $object)
-    
-            if [ ${#objectType} -gt 0 ]; then
+                isPathRelative=$(isRelative $targetObject)
+                echo "JJJJ : $targetObject"
+                
+                if [ $isPathRelative -eq 1 ];then
+                    targetObject=$(newObject $targetObject)
+                fi
+                echo "LLLL : $targetObject"
+                objectType=$(objectExist $targetObject)
+                canDelete=$objectType
 
-                totalOjectSegment=$(totalSegments $object)
+                if [ ${#objectType} -gt 0 ]; then
 
-                if [[ $object =~ ^$protectedDirectory ]]; then
-                    # Check the current 
+                    totalOjectSegment=$(totalSegments $targetObject)
 
-                    if [ $totalOjectSegment -lt $level ]; then
-                        promptForDeletion $object $protectedDirectory 
-                        
-                        if [ $? -eq 22 ]; then
-                            if [ $delFile -eq 0 ]; then
-                                deleteFile $object
-                                delFile=1
-                                eShow=1
+                    if [[ $targetObject =~ ^$protectedDirectory ]]; then
+                        # Check the current 
+                        echo "kkkkkkkkkkkkkkk"
+                        if [ $totalOjectSegment -lt $level ]; then
+                            promptForDeletion $targetObject $protectedDirectory 
+                            
+                            if [ $? -eq 22 ]; then
+                                if [ $delFile -eq 0 ]; then
+                                    deleteFile $targetObject
+                                    delFile=1
+                                    eShow=1
+                                fi
                             fi
                         fi
+                    else
+                        echo $targetObject" :: MMMMMMMMMMMMMM:: "$protectedDirectory
+
                     fi
-                fi
 
+                else
+                    # no object found to delete
+                    
+                    if [ $eShow -eq 0 ]; then
+                        echo -e "\nThe object '$targetObject' does not exist for deletion\n"
+                        eShow=1
+                        exit
+                    fi
+                    
+                fi
+            
+            done 
+
+            if [[ $delFile -eq 0 && ${#canDelete} -gt 0 ]]; then
+                deleteFile $targetObject $@
             else
-                # no object found to delete
-                
-                if [ $eShow -eq 0 ]; then
-                    echo -e "\nThe object '$object' does not exist for deletion\n"
-                    eShow=1
-                fi
-                
+                echo -e "\nThe object '$targetObject' does not exist for deletion\n"
             fi
-
-        done 
-
-        if [ $delFile -eq 0 ]; then
-            deleteFile $object $@
         fi
+    else
+        echo "Please specify what to delete"
     fi
 
 fi
