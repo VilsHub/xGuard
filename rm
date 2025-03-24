@@ -108,7 +108,8 @@ function newObject(){
     local currentDir=$(pwd)
 
     if [[ $firstChar == "." && $first2Chars != ".." ]];then
-        path=${path#.}
+        targetSegment=$(echo $path | sed 's/.\///') 
+        parsedPath=$currentDir"/"$targetSegment
     elif [[ $first2Chars == ".." ]]; then
 
         pathsSegment=$(spliBy $path "..")
@@ -299,7 +300,7 @@ else
             for protectedDirectory in ${protectedDirectories[@]}; do
 
                 isPathRelative=$(isRelative $targetObject)
-                
+                echo "ppp="$targetObject
                 if [ $isPathRelative -eq 1 ];then
                     targetObject=$(newObject $targetObject)
                 fi
