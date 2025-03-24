@@ -135,7 +135,7 @@ function newObject(){
         fi
 
     elif [ $firstChar != "/" ]; then
-        # Implicit relative
+        # Implicitly relative
         parsedPath=$currentDir"/"$path
     fi
 
@@ -151,9 +151,8 @@ function isRelative(){
 
     if [[ $firstChar == "." || $first2Chars == ".." || $firstChar != "/" ]]; then
         status=1
-    # elif [ $firstChar != "/" ]; then
-    #     status=0
     fi
+
     echo $status
 }
 
@@ -178,7 +177,7 @@ function deleteFile(){
         parsedOptions="-"$options
     fi
 
-    #$mainRM $parsedOptions $file
+    $mainRM $parsedOptions $file
 
     if [ $? -eq 0 ]; then
         echo -e "'$file' $objectType deleted successfully!\n"
@@ -245,7 +244,7 @@ if [ $totalFilesOrDirs -gt 1 ]; then
                         if [[ $object =~ ^$protectedDirectory ]]; then
                             
                             # Check the current 
-                            if [ $totalOjectSegment -lt $level ]; then
+                            if [ $totalOjectSegment -le $level ]; then
 
                                 promptForDeletion $object $protectedDirectory 
 
@@ -265,7 +264,7 @@ if [ $totalFilesOrDirs -gt 1 ]; then
 
                         # no object found to delete
                         if [ $eShow -eq 0 ]; then
-                            echo -e "\nThe object '$object' does not exist for deletion 33\n"
+                            echo -e "\nThe object '$object' does not exist for deletion\n"
                             eShow=1
                         fi
 
@@ -300,7 +299,7 @@ else
             for protectedDirectory in ${protectedDirectories[@]}; do
 
                 isPathRelative=$(isRelative $targetObject)
-                echo "ppp="$targetObject
+
                 if [ $isPathRelative -eq 1 ];then
                     targetObject=$(newObject $targetObject)
                 fi
@@ -314,7 +313,7 @@ else
 
                     if [[ $targetObject =~ ^$protectedDirectory ]]; then
                         # Check the current 
-                        if [ $totalOjectSegment -lt $level ]; then
+                        if [ $totalOjectSegment -le $level ]; then
                             promptForDeletion $targetObject $protectedDirectory 
                             
                             if [ $? -eq 22 ]; then
@@ -331,7 +330,7 @@ else
                     # no object found to delete
                     
                     if [ $eShow -eq 0 ]; then
-                        echo -e "\nThe object '$targetObject' does not exist for deletion 11\n"
+                        echo -e "\nThe object '$targetObject' does not exist for deletion\n"
                         eShow=1
                         exit
                     fi
@@ -342,8 +341,6 @@ else
 
             if [[ $delFile -eq 0 && ${#canDelete} -gt 0 ]]; then
                 deleteFile $targetObject $@
-            # else
-                # echo -e "\nThe object '$targetObject' does not exist for deletion 22\n"
             fi
         fi
     else
