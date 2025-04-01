@@ -295,18 +295,14 @@ function customDelete(){
 
                             # no object found to delete
                             if [ $eShow -eq 0 ]; then
-                                echo -e "\nThe object '$object' does not exist for deletion 33\n"
+                                echo -e "\nThe object '$object' does not exist for deletion\n"
                                 eShow=1
                             fi
 
                         fi
 
                     done 
-
-                    if [ $delFile -eq 0 ]; then
-                        deleteFile $object
-                    fi
-
+                    
                 else
                     continue
                 fi
@@ -361,7 +357,7 @@ function customDelete(){
                         # no object found to delete
                         
                         if [ $eShow -eq 0 ]; then
-                            echo -e "\nThe object '$targetObject' does not exist for deletion 11\n"
+                            echo -e "\nThe object '$targetObject' does not exist for deletion\n"
                             eShow=1
                             exit
                         fi
