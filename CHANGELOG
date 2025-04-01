@@ -1,0 +1,6 @@
+v2.0.0
+	- Added option to allow onetime authentication for all files in a delete session.
+	- Optimised script to only work in interactive shell, ensuring that applications and services can still use the native rm utility without interference.
+	- Updated Readme file.
+	- Added Changelog file.
+	- Intensive code Optimisization for internal logic.

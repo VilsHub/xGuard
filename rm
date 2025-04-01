@@ -1,14 +1,18 @@
 #!/bin/bash
 params=$*
+inputOptions=("$@")
 
 # Config
 delPassword="123456"
 level=5
 mainRM="/usr/bin/rm"
+approveDeletion=0
+approvalRequest=0
 
-
-# Functions definition
+#___________Functions definition starts___________
 function formOptions(){
+     # Restore positional parameters
+    set -- "${inputOptions[@]}"
     local options=""
     while getopts "fiIrdv" variable; do
 
@@ -76,7 +80,7 @@ function promptForDeletion(){
 
     echo -e "\nThe $objectType '$directory' to be deleted exist within $level levels deep from the Protected directory '"$protectedDirectory"'"
     echo "You would need to supply your password to proceed or cancel ( Ctrl + C ) to use the inbuilt rm '$mainRM' utility for deletion"
-    read -p "Password: " password
+    read -sp "Password: " password
     while [ $password != $delPassword ]; do
         echo "Incorrect password, try again or cancel ( Ctrl + C ) to use the inbuilt rm '$mainRM' utility for deletion"
         read -sp "Password: " password
@@ -84,7 +88,7 @@ function promptForDeletion(){
     return 22
 }
 
-function spliBy(){
+function splitBy(){
     local string=$1
     local delimiter=$2
     local parts=()
@@ -112,8 +116,8 @@ function newObject(){
         parsedPath=$currentDir"/"$targetSegment
     elif [[ $first2Chars == ".." ]]; then
 
-        pathsSegment=$(spliBy $path "..")
-        currentDirSegment=$(spliBy $currentDir "/")
+        pathsSegment=$(splitBy $path "..")
+        currentDirSegment=$(splitBy $currentDir "/")
 
         read -a parsedPathsSegment <<< "$pathsSegment"
         read -a parsedcurrentDirSegment <<< "$currentDirSegment"
@@ -171,14 +175,14 @@ function deleteFile(){
     fi
     
 
-    options=$(formOptions $@)
+    options=$(formOptions)
     parsedOptions=""
 
     if [ ${#options} -gt 0 ]; then
         parsedOptions="-"$options
     fi
-
-    #$mainRM $parsedOptions $file
+ 
+    $mainRM $parsedOptions $file
 
     if [ $? -eq 0 ]; then
         echo -e "'$file' $objectType deleted successfully!\n"
@@ -198,156 +202,194 @@ function isOption(){
     echo $status
 }
 
+function customDelete(){
+    # List of gaurded root directories protected to maximum $level levels sub directories
+    protectedDirectories=("/root" "/usr" "/bin" "/boot" "/dev" "/etc" "/home" "/lib" "/lib32" "/lib64" "/libx32" "/media" "/opt" "/proc" "/run" "/sbin" "/snap" "/srv" "/sys" "/var")
+    currentDir=$(pwd)
 
-# List of gaurded root directories protected to maximum $level levels sub directories
-protectedDirectories=("/root" "/usr" "/bin" "/boot" "/dev" "/etc" "/home" "/lib" "/lib32" "/lib64" "/libx32" "/media" "/opt" "/proc" "/run" "/sbin" "/snap" "/srv" "/sys" "/var")
-currentDir=$(pwd)
+    # Check multiple mode
+    delimiter=" "
+    IFS="$delimiter" read -ra objects <<< "$params"
+    totalFilesOrDirs=${#objects[@]}
 
-# Check multiple mode
-delimiter=" "
-IFS="$delimiter" read -ra objects <<< "$params"
-totalFilesOrDirs=${#objects[@]}
+    # Current diretory
+    totalCurrentDirSegment=$(totalSegments $currentDir)
 
-# Current diretory
-totalCurrentDirSegment=$(totalSegments $currentDir)
+    if [ $totalFilesOrDirs -gt 1 ]; then
+        # Multiple objects deletion detected (if option is passed or more than one object specified for deletion)
+        for object in ${objects[@]}; do
+            
+            if [ $object == "/" ]; then
+                echo -e "Trying to delete '/' skipping deletion task....\n"
+                continue
+            else
 
-if [ $totalFilesOrDirs -gt 1 ]; then
-    # Multiple objects deletion detected (if option is passed or more than one object specified for deletion)
-    for object in ${objects[@]}; do
-        
-        if [ $object == "/" ]; then
-            echo -e "Trying to delete '/' skipping deletion task....\n"
-            continue
-        else
+                is_option=$(isOption $object)
 
-            is_option=$(isOption $object)
+                if [ $is_option -eq 0 ]; then
 
-            if [ $is_option -eq 0 ]; then
+                    eShow=0
+                    delFile=0
 
-                eShow=0
-                delFile=0
+                    for protectedDirectory in ${protectedDirectories[@]}; do
+
+                        isPathRelative=$(isRelative $object)
+
+                        if [ $isPathRelative -eq 1 ];then
+                            object=$(newObject $object)
+                        fi
+                    
+                        objectType=$(objectExist $object)
+
+                        if [ ${#objectType} -gt 0 ]; then
+                            
+                            # object exist
+                            totalOjectSegment=$(totalSegments $object)
+
+                            if [[ $object =~ ^$protectedDirectory ]]; then
+                                
+                                # Check the current 
+                                if [ $totalOjectSegment -le $level ]; then
+
+                                    if [ $approveDeletion -eq 1 ]; then
+
+                                        # Authentication allowed for all
+                                        if [ $delFile -eq 0 ]; then
+                                            deleteFile $object
+                                            delFile=1
+                                            eShow=1
+                                        fi
+
+                                    elif [ $approveDeletion -eq 0 ]; then
+
+                                        promptForDeletion $object $protectedDirectory
+
+                                        if [ $? -eq 22 ]; then
+
+                                            if [ $delFile -eq 0 ]; then
+
+                                                if [ $approvalRequest -eq 0 ]; then
+                                                    # Prompt for approval
+                                                    echo -e "\n"
+                                                    read -p "Would you approve deletion for all the files to be deleted? (Y/N): " isApprove
+                                                    
+                                                    if [[ $isApprove = "y" || $isApprove = "Y" ]]; then
+                                                        approveDeletion=1
+                                                    fi
+                                                    approvalRequest=1
+                                                fi
+                                               
+                                                deleteFile $object
+                                                delFile=1
+                                                eShow=1
+                                            fi
+                                        fi
+
+                                    fi
+
+                                fi
+                                
+                            fi
+
+                        else
+
+                            # no object found to delete
+                            if [ $eShow -eq 0 ]; then
+                                echo -e "\nThe object '$object' does not exist for deletion 33\n"
+                                eShow=1
+                            fi
+
+                        fi
+
+                    done 
+
+                    if [ $delFile -eq 0 ]; then
+                        deleteFile $object
+                    fi
+
+                else
+                    continue
+                fi
+            fi
+
+        done
+    else
+        # Single directories deletion detected 
+        # #objects holds a single directory
+        targetObject=$objects
+        eShow=0
+        delFile=0
+        canDelete=0
+
+        if [ ${#targetObject} -gt 0 ]; then
+            if [ $targetObject == "/" ]; then
+                echo -e "Trying to delete '/' exiting....\n"
+                exit 0
+            else
 
                 for protectedDirectory in ${protectedDirectories[@]}; do
 
-                    isPathRelative=$(isRelative $object)
+                    isPathRelative=$(isRelative $targetObject)
 
                     if [ $isPathRelative -eq 1 ];then
-                        object=$(newObject $object)
+                        targetObject=$(newObject $targetObject)
                     fi
-                
-                    objectType=$(objectExist $object)
+
+                    objectType=$(objectExist $targetObject)
+                    canDelete=$objectType
 
                     if [ ${#objectType} -gt 0 ]; then
-                        
-                        # object exist
-                        totalOjectSegment=$(totalSegments $object)
 
-                        if [[ $object =~ ^$protectedDirectory ]]; then
-                            
+                        totalOjectSegment=$(totalSegments $targetObject)
+
+                        if [[ $targetObject =~ ^$protectedDirectory ]]; then
                             # Check the current 
-                            if [ $totalOjectSegment -lt $level ]; then
-
-                                promptForDeletion $object $protectedDirectory 
-
+                            if [ $totalOjectSegment -le $level ]; then
+                                promptForDeletion $targetObject $protectedDirectory 
+                                
                                 if [ $? -eq 22 ]; then
                                     if [ $delFile -eq 0 ]; then
-                                        deleteFile $object $@
+                                        deleteFile $targetObject
                                         delFile=1
                                         eShow=1
                                     fi
                                 fi
-
                             fi
-                            
                         fi
 
                     else
-
                         # no object found to delete
+                        
                         if [ $eShow -eq 0 ]; then
-                            echo -e "\nThe object '$object' does not exist for deletion 33\n"
+                            echo -e "\nThe object '$targetObject' does not exist for deletion 11\n"
                             eShow=1
+                            exit
                         fi
-
+                        
                     fi
-
+                
                 done 
 
-                if [ $delFile -eq 0 ]; then
-                    deleteFile $object $@
+                if [[ $delFile -eq 0 && ${#canDelete} -gt 0 ]]; then
+                    deleteFile $targetObject
                 fi
-
-            else
-                continue
             fi
-        fi
-
-    done
-else
-    # Single directories deletion detected 
-    # #objects holds a single directory
-    targetObject=$objects
-    eShow=0
-    delFile=0
-    canDelete=0
-
-    if [ ${#targetObject} -gt 0 ]; then
-        if [ $targetObject == "/" ]; then
-            echo -e "Trying to delete '/' exiting....\n"
-            exit 0
         else
-
-            for protectedDirectory in ${protectedDirectories[@]}; do
-
-                isPathRelative=$(isRelative $targetObject)
-                echo "ppp="$targetObject
-                if [ $isPathRelative -eq 1 ];then
-                    targetObject=$(newObject $targetObject)
-                fi
-
-                objectType=$(objectExist $targetObject)
-                canDelete=$objectType
-
-                if [ ${#objectType} -gt 0 ]; then
-
-                    totalOjectSegment=$(totalSegments $targetObject)
-
-                    if [[ $targetObject =~ ^$protectedDirectory ]]; then
-                        # Check the current 
-                        if [ $totalOjectSegment -lt $level ]; then
-                            promptForDeletion $targetObject $protectedDirectory 
-                            
-                            if [ $? -eq 22 ]; then
-                                if [ $delFile -eq 0 ]; then
-                                    deleteFile $targetObject
-                                    delFile=1
-                                    eShow=1
-                                fi
-                            fi
-                        fi
-                    fi
-
-                else
-                    # no object found to delete
-                    
-                    if [ $eShow -eq 0 ]; then
-                        echo -e "\nThe object '$targetObject' does not exist for deletion 11\n"
-                        eShow=1
-                        exit
-                    fi
-                    
-                fi
-            
-            done 
-
-            if [[ $delFile -eq 0 && ${#canDelete} -gt 0 ]]; then
-                deleteFile $targetObject $@
-            # else
-                # echo -e "\nThe object '$targetObject' does not exist for deletion 22\n"
-            fi
+            echo "Please specify what to delete"
         fi
-    else
-        echo "Please specify what to delete"
-    fi
 
+    fi
+}
+#___________Functions definition ends___________
+
+
+# Check if the script is being run interactively (directly by a user)
+if [[ ! -t 0 || ! -t 1 ]]; then
+    # Delete with inbuilt tool
+    # -t 0 checks if stdin is a terminal (interactive session).
+    # -t 1 checks if stdout is a terminal (interactive session).
+    exec $mainRM "$params"
+else
+    # Run custom delete
+    customDelete
 fi
