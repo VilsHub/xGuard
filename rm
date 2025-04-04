@@ -286,11 +286,17 @@ function customDelete(){
                                         fi
 
                                     fi
-
+                                else
+                                # Safe to delete
+                                    if [[  $delFile -eq 0 && $eShow -eq 0 ]]; then
+                                        deleteFile $object
+                                        delFile=1
+                                        eShow=1
+                                    fi
                                 fi
-                                
+                              
                             fi
-
+                                
                         else
 
                             # no object found to delete
@@ -303,6 +309,13 @@ function customDelete(){
 
                     done 
                     
+                    # Safe to delete object not found within all protected directories
+                    if [[ $delFile -eq 0 && $eShow -eq 0 ]]; then
+                        deleteFile $object
+                        delFile=1
+                        eShow=1
+                    fi
+
                 else
                     continue
                 fi
