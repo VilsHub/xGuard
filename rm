@@ -218,8 +218,8 @@ function customDelete(){
     if [ $totalFilesOrDirs -gt 1 ]; then
         # Multiple objects deletion detected (if option is passed or more than one object specified for deletion)
         for object in ${objects[@]}; do
-            
-            if [ $object == "/" ]; then
+
+            if [[ $object == "/" || ( "$object" == "./" && "$currentDir" == "/" ) ]]; then
                 echo -e "Trying to delete '/' skipping deletion task....\n"
                 continue
             else
@@ -331,7 +331,8 @@ function customDelete(){
         canDelete=0
 
         if [ ${#targetObject} -gt 0 ]; then
-            if [ $targetObject == "/" ]; then
+    
+            if [[ $targetObject == "/"  || ( "$targetObject" == "./" && "$currentDir" == "/" ) ]]; then
                 echo -e "Trying to delete '/' exiting....\n"
                 exit 0
             else

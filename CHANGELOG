@@ -1,3 +1,6 @@
+v2.0.1
+	- Fixed issue with not detecting root (/) directory when in / and executes rm ./
+
 v2.0.0
 	- Added option to allow onetime authentication for all files in a delete session.
 	- Optimised script to only work in interactive shell, ensuring that applications and services can still use the native rm utility without interference.
