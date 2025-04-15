@@ -1,3 +1,6 @@
+v2.0.2
+	- Extended root (/) directory protection against indifinite relative path execution, when on / directory. Example ../../../ and etc. 
+
 v2.0.1
 	- Fixed issue with not detecting root (/) directory when in / and executes rm ./
 

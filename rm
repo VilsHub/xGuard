@@ -219,7 +219,7 @@ function customDelete(){
         # Multiple objects deletion detected (if option is passed or more than one object specified for deletion)
         for object in ${objects[@]}; do
 
-            if [[ $object == "/" || ( "$object" == "./" && "$currentDir" == "/" ) ]]; then
+            if [[ $object == "/" || ("$object" =~ ^(\.\./|\./) && "$currentDir" == "/" ) ]]; then
                 echo -e "Trying to delete '/' skipping deletion task....\n"
                 continue
             else
@@ -332,7 +332,7 @@ function customDelete(){
 
         if [ ${#targetObject} -gt 0 ]; then
     
-            if [[ $targetObject == "/"  || ( "$targetObject" == "./" && "$currentDir" == "/" ) ]]; then
+            if [[ $targetObject == "/"  || ("$targetObject" =~ ^(\.\./|\./) && "$currentDir" == "/" ) ]]; then
                 echo -e "Trying to delete '/' exiting....\n"
                 exit 0
             else
